@@ -4,9 +4,8 @@
 
 package it.oberwalder.caep;
 
-public class MainTest {
+import static org.junit.Assert.*;
 
-
-
+public class FaceRecTest {
 
 }

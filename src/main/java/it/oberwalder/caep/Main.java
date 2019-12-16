@@ -4,6 +4,7 @@
 
 package it.oberwalder.caep;
 
+<<<<<<< HEAD
 import org.opencv.core.*;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
@@ -72,6 +73,17 @@ public class Main {
 
 
 
+=======
+public class Main {
+    static {
+        System.load(
+                "C:\\opencv\\build\\java\\x64\\opencv_java412.dll");
+    }
+
+    public static void main(String[] args) {
+        FaceRec faceRec = new FaceRec();
+        faceRec.startRec();
+>>>>>>> 9efa299... -moved to dev-branch started cleanup and testing
 
     }
 }
