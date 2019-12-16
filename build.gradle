@@ -13,8 +13,8 @@ repositories {
 
 dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.12'
-    compile files('C:\\Program Files\\opencv\\build\\java\\opencv-412.jar')
-    compile files('C:\\Program Files\\opencv\\build\\java\\x64\\opencv_java412.dll')
+    compile files('C:\\opencv\\build\\java\\opencv-412.jar')
+    compile files('C:\\opencv\\build\\java\\x64\\opencv_java412.dll')
 
 }
 
