@@ -10,9 +10,6 @@ import org.opencv.imgproc.Imgproc;
 import org.opencv.videoio.VideoCapture;
 import org.opencv.videoio.VideoWriter;
 
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -44,18 +41,9 @@ public class FaceRecognition {
         Mat imageArray = new Mat();
         VideoCapture videoDevice = new VideoCapture();
         videoDevice.open(imageSource.getFilePath());
+        ImageSourceDAO imageSourceDAO = new ImageSourceDAO();
+        imageSourceDAO.insertImageSource(imageSource);
         Net net = readNetFromCaffe(NEURAL_NET_CONFIG_PATH, NEURAL_NET_MODEL_PATH);
-        try {
-            Class.forName("com.mysql.cj.jdbc.Driver");
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-        try {
-            Connection con = DriverManager.getConnection("jdbc:mysql://localhost:3306/caep", "root", "");
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-
 
 
         if (videoDevice.isOpened()) {
@@ -80,6 +68,9 @@ public class FaceRecognition {
                         , (int) imageSource.getHeight()));
                 showResults(outImage);
                 videoOut.write(outImage);
+                if (timeStamp == imageSource.getFrameCount()-10) {
+                    break;
+                }
             }
             videoDevice.release();
             videoOut.release();

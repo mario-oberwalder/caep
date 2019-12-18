@@ -11,6 +11,7 @@ public class Main {
     public static void main(String[] args) {
        FaceRecognition faceRecognition = new FaceRecognition();
        faceRecognition.startRecognition();
+        //faceRecognition.playback();
 
     }
 }

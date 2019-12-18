@@ -6,11 +6,19 @@ package it.oberwalder.caep;
 
 import org.opencv.videoio.VideoCapture;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
 public class ImageSource {
 
     private String filePath;
     private String fileName;
     private String fileLocation;
+    private String md5Hash;
+    private Long isid;
     private double width;
     private double height;
     private double fps;
@@ -39,7 +47,6 @@ public class ImageSource {
         if(!videoDevice.isOpened()){
             System.out.println("Couldn't open image source");
             }
-
         this.width = videoDevice.get(3);
         this.height = videoDevice.get(4);
         this.fps = videoDevice.get(5);
@@ -48,9 +55,26 @@ public class ImageSource {
         this.verticalTiles = (int) Math.ceil(height/FaceRecognition.NEURAL_NET_FRAME_HEIGHT);
         this.expandedWidth = FaceRecognition.NEURAL_NET_FRAME_WIDTH*horizontalTiles;
         this.expandedHeight = FaceRecognition.NEURAL_NET_FRAME_HEIGHT*verticalTiles;
-
+        try {
+            this.md5Hash = calculateMd5Hash();
+        } catch (NoSuchAlgorithmException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         videoDevice.release();
+    }
 
+    private String calculateMd5Hash() throws NoSuchAlgorithmException, IOException {
+        String filename = this.getFilePath();
+        MessageDigest md = MessageDigest.getInstance("MD5");
+        md.update(Files.readAllBytes(Paths.get(filename)));
+        byte[] digest = md.digest();
+        StringBuilder sb = new StringBuilder();
+        for (byte b : digest) {
+            sb.append(String.format("%02x", b));
+        }
+        return sb.toString();
     }
 
     public double getWidth() {
@@ -87,5 +111,13 @@ public class ImageSource {
 
     public String getFilePath() {
         return filePath;
+    }
+
+    public String getMd5Hash() {
+        return  md5Hash;
+    }
+
+    public void setIsid(long isid) {
+        this.isid = isid;
     }
 }
