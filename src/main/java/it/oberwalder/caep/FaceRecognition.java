@@ -29,7 +29,7 @@ public class FaceRecognition {
     private static final String NEURAL_NET_MODEL_PATH = "C:\\opencv\\sources\\samples\\dnn\\face_detector\\res10_300x300_ssd_iter_140000_fp16.caffemodel";
     private static final String NEURAL_NET_CONFIG_PATH = "C:\\opencv\\sources\\samples\\dnn\\face_detector\\deploy.prototxt";
     private static final String WINDOW_NAME = "wonderful window";
-    static Double timeStamp = 0d;
+    static Double frameTime = 0d;
     ImageSource imageSource = new ImageSource();
     VideoWriter videoOut;
     List<RawResult> resultsData = new ArrayList<>();
@@ -55,7 +55,7 @@ public class FaceRecognition {
                     , new Size(imageSource.getWidth(), imageSource.getHeight()));
 
             while (videoDevice.read(imageArray)) {
-                timeStamp++;
+                frameTime++;
                 List<Mat> subFrames;
                 List<Mat> detectionMats;
 
@@ -68,7 +68,7 @@ public class FaceRecognition {
                         , (int) imageSource.getHeight()));
                 showResults(outImage);
                 videoOut.write(outImage);
-                if (timeStamp == imageSource.getFrameCount()-10) {
+                if (frameTime == imageSource.getFrameCount()-10) {
                     break;
                 }
             }
@@ -127,6 +127,7 @@ public class FaceRecognition {
 
 
     private List<Mat> applyEffects(List<Mat> subFrames, List<Mat> detections) {
+        RawResultDAO rawResultDAO = new RawResultDAO();
         for (int i = 0; i < subFrames.size(); i++) {
             Mat detectionMat = detections.get(i).reshape(1, (int) detections.get(i).total() / 7);
             for (int j = 0; j < detectionMat.rows(); j++) {
@@ -134,7 +135,8 @@ public class FaceRecognition {
                 if (confidence > 0.1d) {
                     Point point1 = pointFromDetection(detectionMat, j, 3, 4);
                     Point point2 = pointFromDetection(detectionMat, j, 5, 6);
-                    resultsData.add(new RawResult(timeStamp, confidence, point1, point2));
+                    resultsData.add(new RawResult(frameTime, confidence, point1, point2));
+                    rawResultDAO.insertRawResult(new RawResult(frameTime,frameTime,confidence,point1,point2));
                     if (confidence > CONFIDENCE_THRESHOLD) {
                         Rect faceFrame = new Rect(point1, point2);
                         GaussianBlur(subFrames.get(i).submat(faceFrame)

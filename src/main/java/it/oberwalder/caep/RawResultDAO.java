@@ -44,20 +44,20 @@ public class RawResultDAO implements RawResultDAOInterface{
         try {
             stmt = con.createStatement();
             String insertSql = "INSERT INTO rawresult("+
-                    "currentname, currentpath,md5hash," +
-                    "height,width,fps,framecount)"
-                    + " VALUES('"+rawResult.getFilePath() +
-                    "', '"+rawResult.getFilePath()+
-                    "', '"+rawResult.getMd5Hash()+
-                    "', "+rawResult.getHeight()+
-                    ", "+rawResult.getWidth()+
-                    ", "+rawResult.getFps()+
-                    ", "+rawResult.getFrameCount()+")";
+                    "framenumber, frametime,confidence," +
+                    "point1x,point1y,point2x, point2y)"
+                    + " VALUES(" +
+                    rawResult.getFrameNumber()+
+                    ", "+rawResult.getFrameTime()+
+                    ", "+rawResult.getConfidence()+
+                    ", "+rawResult.getPoint1().x+
+                    ", "+rawResult.getPoint1().y+
+                    ", "+rawResult.getPoint2().x+
+                    ", "+rawResult.getPoint2().y+")";
             stmt.executeUpdate(insertSql);
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return false;
         return false;
     }
 
