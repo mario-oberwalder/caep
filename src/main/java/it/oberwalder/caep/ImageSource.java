@@ -4,6 +4,7 @@
 
 package it.oberwalder.caep;
 
+import org.opencv.core.Mat;
 import org.opencv.videoio.VideoCapture;
 
 import java.io.IOException;
@@ -40,6 +41,15 @@ public class ImageSource {
         calculatePropertiesFromFile();
     }
 
+    public  ImageSource(Mat sourceImage){
+        this.width = sourceImage.width();
+        this.height = sourceImage.height();
+        this.horizontalTiles = (int) Math.ceil(width/(double)FaceRecognition.NEURAL_NET_FRAME_WIDTH);
+        this.verticalTiles = (int) Math.ceil(height/(double)FaceRecognition.NEURAL_NET_FRAME_HEIGHT);
+        this.expandedWidth = FaceRecognition.NEURAL_NET_FRAME_WIDTH*horizontalTiles;
+        this.expandedHeight = FaceRecognition.NEURAL_NET_FRAME_HEIGHT*verticalTiles;
+    }
+
     private void calculatePropertiesFromFile() {
         VideoCapture videoDevice = new VideoCapture();
         videoDevice.open(this.getFilePath());
@@ -51,8 +61,8 @@ public class ImageSource {
         this.height = videoDevice.get(4);
         this.fps = videoDevice.get(5);
         this.frameCount = videoDevice.get(7);
-        this.horizontalTiles = (int) Math.ceil(width/FaceRecognition.NEURAL_NET_FRAME_WIDTH);
-        this.verticalTiles = (int) Math.ceil(height/FaceRecognition.NEURAL_NET_FRAME_HEIGHT);
+        this.horizontalTiles = (int) Math.ceil(width/(double)FaceRecognition.NEURAL_NET_FRAME_WIDTH);
+        this.verticalTiles = (int) Math.ceil(height/(double)FaceRecognition.NEURAL_NET_FRAME_HEIGHT);
         this.expandedWidth = FaceRecognition.NEURAL_NET_FRAME_WIDTH*horizontalTiles;
         this.expandedHeight = FaceRecognition.NEURAL_NET_FRAME_HEIGHT*verticalTiles;
         try {

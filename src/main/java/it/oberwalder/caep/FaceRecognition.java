@@ -19,13 +19,13 @@ import static org.opencv.core.Core.vconcat;
 import static org.opencv.dnn.Dnn.blobFromImage;
 import static org.opencv.dnn.Dnn.readNetFromCaffe;
 import static org.opencv.highgui.HighGui.*;
-import static org.opencv.imgproc.Imgproc.GaussianBlur;
-import static org.opencv.imgproc.Imgproc.rectangle;
+import static org.opencv.imgproc.Imgproc.*;
 
 public class FaceRecognition {
     static final Integer NEURAL_NET_FRAME_HEIGHT = 300;
     static final Integer NEURAL_NET_FRAME_WIDTH = 300;
     private static final double CONFIDENCE_THRESHOLD = 0.8;
+    private static final double CONFIDENCE_THRESHOLD_SAVE = 0.2;
     private static final String NEURAL_NET_MODEL_PATH = "C:\\opencv\\sources\\samples\\dnn\\face_detector\\res10_300x300_ssd_iter_140000_fp16.caffemodel";
     private static final String NEURAL_NET_CONFIG_PATH = "C:\\opencv\\sources\\samples\\dnn\\face_detector\\deploy.prototxt";
     private static final String WINDOW_NAME = "wonderful window";
@@ -45,29 +45,20 @@ public class FaceRecognition {
         imageSourceDAO.insertImageSource(imageSource);
         Net net = readNetFromCaffe(NEURAL_NET_CONFIG_PATH, NEURAL_NET_MODEL_PATH);
 
-
         if (videoDevice.isOpened()) {
             namedWindow(WINDOW_NAME, WINDOW_AUTOSIZE);
-
-            videoOut = new VideoWriter(LocalDateTime.now().getHour() +""+ LocalDateTime.now().getMinute() + ".avi"
-                    , VideoWriter.fourcc('M', 'J', 'P', 'G')
-                    , imageSource.getFps()
-                    , new Size(imageSource.getWidth(), imageSource.getHeight()));
-
+            videoOut = provideVideoOut();
             while (videoDevice.read(imageArray)) {
                 frameTime++;
-                List<Mat> subFrames;
+                List<Mat> ROIsFromImage;
                 List<Mat> detectionMats;
+                imageArray = expandFrameForDivision(imageArray,0,0);
+                ROIsFromImage = splitFrameForNet(imageArray);
+                detectionMats = sendFramesThroughNet(ROIsFromImage, net);
+                ROIsFromImage = applyEffects(ROIsFromImage, detectionMats);
+                showResults(imageArray);
+                videoOut.write(imageArray);
 
-                subFrames = splitFrameForNet(imageArray);
-                detectionMats = sendFramesThroughNet(subFrames, net);
-                subFrames = applyEffects(subFrames, detectionMats);
-                Mat resultImage = buildResultImageFromFrames(subFrames);
-                Mat outImage = new Mat(resultImage, new Rect(0, 0
-                        , (int) imageSource.getWidth()
-                        , (int) imageSource.getHeight()));
-                showResults(outImage);
-                videoOut.write(outImage);
                 if (frameTime == imageSource.getFrameCount()-10) {
                     break;
                 }
@@ -78,6 +69,13 @@ public class FaceRecognition {
         } else {
             System.out.println("Couldn't open video device");
         }
+    }
+
+    private VideoWriter provideVideoOut() {
+        return new VideoWriter(LocalDateTime.now().getHour() +""+ LocalDateTime.now().getMinute() + ".avi"
+                , VideoWriter.fourcc('M', 'J', 'P', 'G')
+                , imageSource.getFps()
+                , new Size(imageSource.getWidth(), imageSource.getHeight()));
     }
 
     private Mat buildResultImageFromFrames(List<Mat> subFrames) {
@@ -99,30 +97,39 @@ public class FaceRecognition {
 
     private List<Mat> splitFrameForNet( Mat imageArray) {
         List<Mat> subFrames = new ArrayList<>();
-        imageArray = expandFrameForDivision(imageArray, imageSource.getHorizontalTiles(), imageSource.getVerticalTiles());
-
-        for (int j = 0; j < imageSource.getVerticalTiles(); j++) {
-            for (int k = 0; k < imageSource.getHorizontalTiles(); k++) {
-                Rect selectingRectangle = new Rect(k * NEURAL_NET_FRAME_WIDTH, j * NEURAL_NET_FRAME_HEIGHT
+        for (int j = 0; j < imageSource.getVerticalTiles()*2-1; j++) {
+            for (int k = 0; k < imageSource.getHorizontalTiles()*2-1; k++) {
+                Rect selectingRectangle = new Rect(k * NEURAL_NET_FRAME_WIDTH/2, j * NEURAL_NET_FRAME_HEIGHT/2
                         , NEURAL_NET_FRAME_WIDTH, NEURAL_NET_FRAME_HEIGHT);
-                Mat subFrame = new Mat(imageArray, selectingRectangle);
-                rectangle(subFrame, new Point(0,0), new Point(300,300), new Scalar(100,100,100), 2, 4);
+                Mat subFrame = imageArray.submat(selectingRectangle);
                 subFrames.add(subFrame);
             }
         }
         return subFrames;
     }
 
-    private Mat expandFrameForDivision(Mat imageArray, Integer frameWidthFactor, Integer frameHeightFactor) {
-        Mat backGround = new Mat();
-        backGround.create(
-                new Size(frameWidthFactor * NEURAL_NET_FRAME_WIDTH
-                        , frameHeightFactor * NEURAL_NET_FRAME_HEIGHT)
+    public Integer getHorizontalTiles(Mat Image,Integer addedSpace) {
+        Double returnValue;
+        returnValue = Math.ceil((Image.cols()+addedSpace)/(double)FaceRecognition.NEURAL_NET_FRAME_WIDTH);
+        return returnValue.intValue();
+    }
+
+    public Integer getVerticalTiles(Mat Image,Integer addedSpace) {
+        Double returnValue;
+        returnValue = Math.ceil((Image.rows()+addedSpace) /(double) FaceRecognition.NEURAL_NET_FRAME_HEIGHT);
+        return returnValue.intValue();
+    }
+
+    private Mat expandFrameForDivision(Mat imageArray, int rowStart, int colStart) {
+        Mat expandedFrame = new Mat();
+        expandedFrame.create(
+                new Size(getHorizontalTiles(imageArray,colStart) * NEURAL_NET_FRAME_WIDTH
+                        , getVerticalTiles(imageArray,rowStart) * NEURAL_NET_FRAME_HEIGHT)
                         , imageArray.type());
-        imageArray.copyTo(backGround.submat(
-                0, imageArray.rows()
-                , 0, imageArray.cols()));
-        return backGround;
+        imageArray.copyTo(expandedFrame.submat(
+                rowStart, imageArray.rows()+rowStart
+                , colStart, imageArray.cols()+colStart));
+        return expandedFrame;
     }
 
 
@@ -132,7 +139,7 @@ public class FaceRecognition {
             Mat detectionMat = detections.get(i).reshape(1, (int) detections.get(i).total() / 7);
             for (int j = 0; j < detectionMat.rows(); j++) {
                 double confidence = detectionMat.get(j, 2)[0];
-                if (confidence > 0.1d) {
+                if (confidence > CONFIDENCE_THRESHOLD_SAVE) {
                     Point point1 = pointFromDetection(detectionMat, j, 3, 4);
                     Point point2 = pointFromDetection(detectionMat, j, 5, 6);
                     resultsData.add(new RawResult(frameTime, confidence, point1, point2));
@@ -143,7 +150,7 @@ public class FaceRecognition {
                                 , subFrames.get(i).submat(faceFrame)
                                 ,new Size(45,45)
                                 ,0);
-                        rectangle(subFrames.get(i), point2, point1, new Scalar(0, 174, 255), 2, 4);
+                        //rectangle(subFrames.get(i), point2, point1, new Scalar(0, 174, 255), 2, 4);
                     }
                 }
             }
