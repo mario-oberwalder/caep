@@ -56,8 +56,9 @@ public class FaceRecognition {
                 ROIsFromImage = splitFrameForNet(imageArray);
                 detectionMats = sendFramesThroughNet(ROIsFromImage, net);
                 ROIsFromImage = applyEffects(ROIsFromImage, detectionMats);
-                showResults(imageArray);
-                videoOut.write(imageArray);
+                Mat outputImage= imageArray.submat(0,(int) imageSource.getHeight(),0,(int) imageSource.getWidth());
+                showResults(outputImage);
+                videoOut.write(outputImage);
 
                 if (frameTime == imageSource.getFrameCount()-10) {
                     break;
