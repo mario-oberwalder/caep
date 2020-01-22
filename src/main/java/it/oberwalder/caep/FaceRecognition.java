@@ -14,12 +14,11 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-import static org.opencv.core.Core.hconcat;
-import static org.opencv.core.Core.vconcat;
 import static org.opencv.dnn.Dnn.blobFromImage;
 import static org.opencv.dnn.Dnn.readNetFromCaffe;
 import static org.opencv.highgui.HighGui.*;
-import static org.opencv.imgproc.Imgproc.*;
+import static org.opencv.imgproc.Imgproc.GaussianBlur;
+import static org.opencv.imgproc.Imgproc.rectangle;
 
 public class FaceRecognition {
     static final Integer NEURAL_NET_FRAME_HEIGHT = 300;
@@ -29,6 +28,8 @@ public class FaceRecognition {
     private static final String NEURAL_NET_MODEL_PATH = "C:\\opencv\\sources\\samples\\dnn\\face_detector\\res10_300x300_ssd_iter_140000_fp16.caffemodel";
     private static final String NEURAL_NET_CONFIG_PATH = "C:\\opencv\\sources\\samples\\dnn\\face_detector\\deploy.prototxt";
     private static final String WINDOW_NAME = "wonderful window";
+    private static double overlapVertical = 0.0d;
+    private static double overlapHorizontal = 0.0d;
     static Double frameTime = 0d;
     ImageSource imageSource = new ImageSource();
     VideoWriter videoOut;
@@ -41,8 +42,6 @@ public class FaceRecognition {
         Mat imageArray = new Mat();
         VideoCapture videoDevice = new VideoCapture();
         videoDevice.open(imageSource.getFilePath());
-        ImageSourceDAO imageSourceDAO = new ImageSourceDAO();
-        imageSourceDAO.insertImageSource(imageSource);
         Net net = readNetFromCaffe(NEURAL_NET_CONFIG_PATH, NEURAL_NET_MODEL_PATH);
 
         if (videoDevice.isOpened()) {
@@ -52,17 +51,11 @@ public class FaceRecognition {
                 frameTime++;
                 List<Mat> ROIsFromImage;
                 List<Mat> detectionMats;
-                imageArray = expandFrameForDivision(imageArray,0,0);
                 ROIsFromImage = splitFrameForNet(imageArray);
                 detectionMats = sendFramesThroughNet(ROIsFromImage, net);
                 ROIsFromImage = applyEffects(ROIsFromImage, detectionMats);
-                Mat outputImage= imageArray.submat(0,(int) imageSource.getHeight(),0,(int) imageSource.getWidth());
-                showResults(outputImage);
-                videoOut.write(outputImage);
-
-                if (frameTime == imageSource.getFrameCount()-10) {
-                    break;
-                }
+                showResults(imageArray);
+                videoOut.write(imageArray);
             }
             videoDevice.release();
             videoOut.release();
@@ -79,60 +72,56 @@ public class FaceRecognition {
                 , new Size(imageSource.getWidth(), imageSource.getHeight()));
     }
 
-    private Mat buildResultImageFromFrames(List<Mat> subFrames) {
-        List<Mat> horizontalStrips = new ArrayList<>();
-        Mat outMat = new Mat(
-                NEURAL_NET_FRAME_HEIGHT * imageSource.getVerticalTiles()
-                , NEURAL_NET_FRAME_WIDTH * imageSource.getHorizontalTiles()
-                , subFrames.get(0).type());
-
-        for (int i = 0; i < imageSource.getVerticalTiles(); i++) {
-            horizontalStrips.add(new Mat());
-            hconcat(
-                    subFrames.subList(i * imageSource.getHorizontalTiles(), ((i + 1) * imageSource.getHorizontalTiles()))
-                    , horizontalStrips.get(i));
-        }
-        vconcat(horizontalStrips, outMat);
-        return outMat;
-    }
-
     private List<Mat> splitFrameForNet( Mat imageArray) {
         List<Mat> subFrames = new ArrayList<>();
-        for (int j = 0; j < imageSource.getVerticalTiles()*2-1; j++) {
-            for (int k = 0; k < imageSource.getHorizontalTiles()*2-1; k++) {
-                Rect selectingRectangle = new Rect(k * NEURAL_NET_FRAME_WIDTH/2, j * NEURAL_NET_FRAME_HEIGHT/2
+        addBulkFrames(imageArray, subFrames);
+        addBorderFramesRight(imageArray, subFrames);
+        addBorderFramesBottom(imageArray, subFrames);
+        addBorderFrameBottomRight(imageArray, subFrames);
+
+        return subFrames;
+    }
+
+    private void addBorderFrameBottomRight(Mat imageArray, List<Mat> subFrames) {
+        Rect selectingRectangle = new Rect(imageArray.cols()-NEURAL_NET_FRAME_WIDTH ,
+                imageArray.rows() - NEURAL_NET_FRAME_HEIGHT
+                , NEURAL_NET_FRAME_WIDTH, NEURAL_NET_FRAME_HEIGHT);
+        Mat subFrame = imageArray.submat(selectingRectangle);
+        subFrames.add(subFrame);
+
+    }
+
+    private void addBorderFramesBottom(Mat imageArray, List<Mat> subFrames) {
+        for (int i = 0; i < imageSource.getHorizontalTiles(overlapHorizontal); i++) {
+            Rect selectingRectangle = new Rect((int)(i * NEURAL_NET_FRAME_WIDTH*(1-overlapHorizontal)) ,
+                    imageArray.rows() - NEURAL_NET_FRAME_HEIGHT
+                    , NEURAL_NET_FRAME_WIDTH, NEURAL_NET_FRAME_HEIGHT);
+            Mat subFrame = imageArray.submat(selectingRectangle);
+            subFrames.add(subFrame);
+        }
+    }
+
+    private void addBorderFramesRight(Mat imageArray, List<Mat> subFrames) {
+        for (int i = 0; i < imageSource.getVerticalTiles(overlapVertical); i++) {
+            Rect selectingRectangle = new Rect(imageArray.cols()-NEURAL_NET_FRAME_WIDTH ,
+                    (int)(i * NEURAL_NET_FRAME_HEIGHT*(1-overlapVertical))
+                    , NEURAL_NET_FRAME_WIDTH, NEURAL_NET_FRAME_HEIGHT);
+            Mat subFrame = imageArray.submat(selectingRectangle);
+            subFrames.add(subFrame);
+        }
+    }
+
+    private void addBulkFrames(Mat imageArray, List<Mat> subFrames) {
+        for (int j = 0; j < imageSource.getVerticalTiles(overlapVertical); j++) {
+            for (int k = 0; k < imageSource.getHorizontalTiles(overlapHorizontal); k++) {
+                Rect selectingRectangle = new Rect((int)(k * NEURAL_NET_FRAME_WIDTH*(1-overlapHorizontal)),
+                        (int)(j * NEURAL_NET_FRAME_HEIGHT*(1-overlapVertical))
                         , NEURAL_NET_FRAME_WIDTH, NEURAL_NET_FRAME_HEIGHT);
                 Mat subFrame = imageArray.submat(selectingRectangle);
                 subFrames.add(subFrame);
             }
         }
-        return subFrames;
     }
-
-    public Integer getHorizontalTiles(Mat Image,Integer addedSpace) {
-        Double returnValue;
-        returnValue = Math.ceil((Image.cols()+addedSpace)/(double)FaceRecognition.NEURAL_NET_FRAME_WIDTH);
-        return returnValue.intValue();
-    }
-
-    public Integer getVerticalTiles(Mat Image,Integer addedSpace) {
-        Double returnValue;
-        returnValue = Math.ceil((Image.rows()+addedSpace) /(double) FaceRecognition.NEURAL_NET_FRAME_HEIGHT);
-        return returnValue.intValue();
-    }
-
-    private Mat expandFrameForDivision(Mat imageArray, int rowStart, int colStart) {
-        Mat expandedFrame = new Mat();
-        expandedFrame.create(
-                new Size(getHorizontalTiles(imageArray,colStart) * NEURAL_NET_FRAME_WIDTH
-                        , getVerticalTiles(imageArray,rowStart) * NEURAL_NET_FRAME_HEIGHT)
-                        , imageArray.type());
-        imageArray.copyTo(expandedFrame.submat(
-                rowStart, imageArray.rows()+rowStart
-                , colStart, imageArray.cols()+colStart));
-        return expandedFrame;
-    }
-
 
     private List<Mat> applyEffects(List<Mat> subFrames, List<Mat> detections) {
         RawResultDAO rawResultDAO = new RawResultDAO();
@@ -151,10 +140,13 @@ public class FaceRecognition {
                                 , subFrames.get(i).submat(faceFrame)
                                 ,new Size(45,45)
                                 ,0);
-                        //rectangle(subFrames.get(i), point2, point1, new Scalar(0, 174, 255), 2, 4);
+                        rectangle(subFrames.get(i), point2, point1, new Scalar(0, 174, 255), 2, 4);
                     }
                 }
             }
+        }
+        for (Mat subFrame:subFrames) {
+            rectangle(subFrame, new Point(0,0), new Point(NEURAL_NET_FRAME_WIDTH, NEURAL_NET_FRAME_HEIGHT), new Scalar(0, 174, 255), 2, 4);
         }
         return subFrames;
     }

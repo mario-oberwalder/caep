@@ -4,7 +4,6 @@
 
 package it.oberwalder.caep;
 
-import org.opencv.core.Mat;
 import org.opencv.videoio.VideoCapture;
 
 import java.io.IOException;
@@ -26,28 +25,12 @@ public class ImageSource {
     private double frameCount;
     private Integer horizontalTiles;
     private Integer verticalTiles;
-    private Integer expandedWidth;
-    private Integer expandedHeight;
 
     public ImageSource() {
         this.fileLocation = "C:\\movies\\";
         this.fileName = "test2.mp4";
         this.filePath = fileLocation + fileName;
         calculatePropertiesFromFile();
-    }
-
-    public  ImageSource(String filePath) {
-        this.filePath = filePath;
-        calculatePropertiesFromFile();
-    }
-
-    public  ImageSource(Mat sourceImage){
-        this.width = sourceImage.width();
-        this.height = sourceImage.height();
-        this.horizontalTiles = (int) Math.ceil(width/(double)FaceRecognition.NEURAL_NET_FRAME_WIDTH);
-        this.verticalTiles = (int) Math.ceil(height/(double)FaceRecognition.NEURAL_NET_FRAME_HEIGHT);
-        this.expandedWidth = FaceRecognition.NEURAL_NET_FRAME_WIDTH*horizontalTiles;
-        this.expandedHeight = FaceRecognition.NEURAL_NET_FRAME_HEIGHT*verticalTiles;
     }
 
     private void calculatePropertiesFromFile() {
@@ -63,8 +46,6 @@ public class ImageSource {
         this.frameCount = videoDevice.get(7);
         this.horizontalTiles = (int) Math.ceil(width/(double)FaceRecognition.NEURAL_NET_FRAME_WIDTH);
         this.verticalTiles = (int) Math.ceil(height/(double)FaceRecognition.NEURAL_NET_FRAME_HEIGHT);
-        this.expandedWidth = FaceRecognition.NEURAL_NET_FRAME_WIDTH*horizontalTiles;
-        this.expandedHeight = FaceRecognition.NEURAL_NET_FRAME_HEIGHT*verticalTiles;
         try {
             this.md5Hash = calculateMd5Hash();
         } catch (NoSuchAlgorithmException e) {
@@ -107,16 +88,23 @@ public class ImageSource {
         return horizontalTiles;
     }
 
+    public Integer getHorizontalTiles(Double overlapHorizontal) {
+        double width;
+        int tileNumber;
+        width = this.width - FaceRecognition.NEURAL_NET_FRAME_WIDTH;
+        tileNumber = (int) (width/(FaceRecognition.NEURAL_NET_FRAME_WIDTH*(1-overlapHorizontal)));
+        return tileNumber+1;
+    }
+
     public Integer getVerticalTiles() {
         return verticalTiles;
     }
-
-    public Integer getExpandedWidth() {
-        return expandedWidth;
-    }
-
-    public Integer getExpandedHeight() {
-        return expandedHeight;
+    public Integer getVerticalTiles(Double overlapVertical) {
+        double height;
+        int tileNumber;
+        height = this.height - FaceRecognition.NEURAL_NET_FRAME_HEIGHT;
+        tileNumber = (int) (height/(FaceRecognition.NEURAL_NET_FRAME_HEIGHT*(1-overlapVertical)));
+        return tileNumber+1;
     }
 
     public String getFilePath() {
