@@ -23,7 +23,7 @@ import static org.opencv.imgproc.Imgproc.rectangle;
 public class FaceRecognition {
     static final Integer NEURAL_NET_FRAME_HEIGHT = 300;
     static final Integer NEURAL_NET_FRAME_WIDTH = 300;
-    private static final double CONFIDENCE_THRESHOLD = 0.8;
+    private static final double CONFIDENCE_THRESHOLD = 0.95;
     private static final double CONFIDENCE_THRESHOLD_SAVE = 0.2;
     private static final String NEURAL_NET_MODEL_PATH = "C:\\opencv\\sources\\samples\\dnn\\face_detector\\res10_300x300_ssd_iter_140000_fp16.caffemodel";
     private static final String NEURAL_NET_CONFIG_PATH = "C:\\opencv\\sources\\samples\\dnn\\face_detector\\deploy.prototxt";
@@ -53,7 +53,7 @@ public class FaceRecognition {
                 List<Mat> detectionMats;
                 ROIsFromImage = splitFrameForNet(imageArray);
                 detectionMats = sendFramesThroughNet(ROIsFromImage, net);
-                ROIsFromImage = applyEffects(ROIsFromImage, detectionMats);
+                applyEffects(ROIsFromImage, detectionMats);
                 showResults(imageArray);
                 videoOut.write(imageArray);
             }
@@ -123,7 +123,7 @@ public class FaceRecognition {
         }
     }
 
-    private List<Mat> applyEffects(List<Mat> subFrames, List<Mat> detections) {
+    private void applyEffects(List<Mat> subFrames, List<Mat> detections) {
         RawResultDAO rawResultDAO = new RawResultDAO();
         for (int i = 0; i < subFrames.size(); i++) {
             Mat detectionMat = detections.get(i).reshape(1, (int) detections.get(i).total() / 7);
@@ -145,10 +145,11 @@ public class FaceRecognition {
                 }
             }
         }
+        /* paint the borders of each subframe
         for (Mat subFrame:subFrames) {
             rectangle(subFrame, new Point(0,0), new Point(NEURAL_NET_FRAME_WIDTH, NEURAL_NET_FRAME_HEIGHT), new Scalar(0, 174, 255), 2, 4);
         }
-        return subFrames;
+         */
     }
 
     private Point pointFromDetection(Mat detectionMat, int j, int i, int i1) {

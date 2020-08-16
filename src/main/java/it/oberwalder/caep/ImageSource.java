@@ -13,22 +13,20 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
 public class ImageSource {
-
-    private String filePath;
-    private String fileName;
-    private String fileLocation;
-    private String md5Hash;
-    private Long isid;
-    private double width;
-    private double height;
-    private double fps;
-    private double frameCount;
+    private final String filePath;
     private Integer horizontalTiles;
     private Integer verticalTiles;
+    String md5Hash;
+    double width;
+    double height;
+    double fps;
+    double frameCount;
 
     public ImageSource() {
-        this.fileLocation = "C:\\movies\\";
-        this.fileName = "test2.mp4";
+        String fileLocation = "C:\\movies\\";
+        String fileName = "test.mp4";
+
+
         this.filePath = fileLocation + fileName;
         calculatePropertiesFromFile();
     }
@@ -37,20 +35,18 @@ public class ImageSource {
         VideoCapture videoDevice = new VideoCapture();
         videoDevice.open(this.getFilePath());
 
-        if(!videoDevice.isOpened()){
+        if (!videoDevice.isOpened()) {
             System.out.println("Couldn't open image source");
-            }
+        }
         this.width = videoDevice.get(3);
         this.height = videoDevice.get(4);
         this.fps = videoDevice.get(5);
         this.frameCount = videoDevice.get(7);
-        this.horizontalTiles = (int) Math.ceil(width/(double)FaceRecognition.NEURAL_NET_FRAME_WIDTH);
-        this.verticalTiles = (int) Math.ceil(height/(double)FaceRecognition.NEURAL_NET_FRAME_HEIGHT);
+        this.horizontalTiles = (int) Math.ceil(width / (double) FaceRecognition.NEURAL_NET_FRAME_WIDTH);
+        this.verticalTiles = (int) Math.ceil(height / (double) FaceRecognition.NEURAL_NET_FRAME_HEIGHT);
         try {
             this.md5Hash = calculateMd5Hash();
-        } catch (NoSuchAlgorithmException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
+        } catch (NoSuchAlgorithmException | IOException e) {
             e.printStackTrace();
         }
         videoDevice.release();
@@ -92,19 +88,20 @@ public class ImageSource {
         double width;
         int tileNumber;
         width = this.width - FaceRecognition.NEURAL_NET_FRAME_WIDTH;
-        tileNumber = (int) (width/(FaceRecognition.NEURAL_NET_FRAME_WIDTH*(1-overlapHorizontal)));
-        return tileNumber+1;
+        tileNumber = (int) (width / (FaceRecognition.NEURAL_NET_FRAME_WIDTH * (1 - overlapHorizontal)));
+        return tileNumber + 1;
     }
 
     public Integer getVerticalTiles() {
         return verticalTiles;
     }
+
     public Integer getVerticalTiles(Double overlapVertical) {
         double height;
         int tileNumber;
         height = this.height - FaceRecognition.NEURAL_NET_FRAME_HEIGHT;
-        tileNumber = (int) (height/(FaceRecognition.NEURAL_NET_FRAME_HEIGHT*(1-overlapVertical)));
-        return tileNumber+1;
+        tileNumber = (int) (height / (FaceRecognition.NEURAL_NET_FRAME_HEIGHT * (1 - overlapVertical)));
+        return tileNumber + 1;
     }
 
     public String getFilePath() {
@@ -112,10 +109,10 @@ public class ImageSource {
     }
 
     public String getMd5Hash() {
-        return  md5Hash;
+        return md5Hash;
     }
 
     public void setIsid(long isid) {
-        this.isid = isid;
+        Long isid1 = isid;
     }
 }
